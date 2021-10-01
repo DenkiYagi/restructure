@@ -3,8 +3,17 @@ Struct = require './Struct'
 class VersionedStruct extends Struct
   constructor: (@type, @versions = {}) ->
     if typeof @type is 'string'
-      @versionGetter = new Function('parent', "return parent.#{@type}")
-      @versionSetter = new Function('parent', 'version', "return parent.#{@type} = version")
+      paths = @type.split(".")
+      @versionGetter = (parent) ->
+        paths.reduce(
+          (acc, x) -> acc[x],
+          parent
+        )
+      @versionSetter = (parent, version) ->
+        acc = parent
+        for x in paths.slice(0, -1)
+          acc = acc[x]
+        acc[paths[paths.length - 1]] = version
 
   decode: (stream, parent, length = 0) ->
     res = @_setup stream, parent, length
@@ -32,7 +41,7 @@ class VersionedStruct extends Struct
   size: (val, parent, includePointers = true) ->
     unless val
       throw new Error 'Not a fixed size'
-    
+
     ctx =
       parent: parent
       val: val

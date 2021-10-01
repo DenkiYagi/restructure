@@ -8,7 +8,11 @@ class Pointer
     @options.nullValue ?= 0
     @options.lazy ?= false
     if @options.relativeTo
-      @relativeToGetter = new Function('ctx', "return ctx.#{@options.relativeTo}")
+      paths = @options.relativeTo.split(".")
+      @relativeToGetter = (ctx) -> paths.reduce(
+        (acc, x) -> acc[x],
+        ctx
+      )
 
   decode: (stream, ctx) ->
     offset = @offsetType.decode(stream, ctx)
@@ -37,19 +41,19 @@ class Pointer
       val = null
       decodeValue = =>
         return val if val?
-          
+
         pos = stream.pos
         stream.pos = ptr
         val = @type.decode(stream, ctx)
         stream.pos = pos
         return val
-        
+
       # If this is a lazy pointer, define a getter to decode only when needed.
       # This obviously only works when the pointer is contained by a Struct.
       if @options.lazy
         return new utils.PropertyDescriptor
           get: decodeValue
-        
+
       return decodeValue()
     else
       return ptr
@@ -75,7 +79,7 @@ class Pointer
 
     if val and ctx
       ctx.pointerSize += type.size(val, parent)
-      
+
     return @offsetType.size()
 
   encode: (stream, val, ctx) ->
